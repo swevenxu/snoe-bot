@@ -349,13 +349,16 @@ client.on('interactionCreate', async interaction => {
   
   // Handle marriage proposal buttons
   if (interaction.isButton() && interaction.customId.startsWith('marry_')) {
-    const [action, odatnerId, targetId] = interaction.customId.split('_');
+    const parts = interaction.customId.split('_');
+    const action = parts[1]; // accept or deny
+    const odatnerId = parts[2];
+    const targetId = parts[3];
     
     if (interaction.user.id !== targetId) {
       return interaction.reply({ content: '❌ This proposal is not for you!', ephemeral: true });
     }
     
-    if (action === 'marry' && interaction.customId.includes('accept')) {
+    if (action === 'accept') {
       // Check if either person got married while waiting
       if (getPartner(interaction.guild.id, odatnerId) || getPartner(interaction.guild.id, targetId)) {
         return interaction.update({ content: '❌ One of you is already married!', embeds: [], components: [] });
@@ -370,7 +373,7 @@ client.on('interactionCreate', async interaction => {
         .setTimestamp();
       
       await interaction.update({ embeds: [embed], components: [] });
-    } else if (action === 'marry' && interaction.customId.includes('deny')) {
+    } else if (action === 'deny') {
       const embed = new EmbedBuilder()
         .setColor(0x2F3136)
         .setTitle('💔 Proposal Rejected')
