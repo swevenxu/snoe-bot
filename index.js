@@ -780,7 +780,7 @@ client.on('interactionCreate', async interaction => {
     
     const embed = new EmbedBuilder()
       .setColor(0x2F3136)
-      .setTitle('💍 Marriage Proposal')
+      .setTitle('<a:1407745857079611442:1462756351032954891> Marriage Proposal')
       .setDescription(`${interaction.user} has proposed to ${target}!\n\n${target}, do you accept?`);
     
     const buttons = new ActionRowBuilder().addComponents(
