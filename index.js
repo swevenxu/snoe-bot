@@ -834,7 +834,7 @@ client.on('interactionCreate', async interaction => {
     
     const embed = new EmbedBuilder()
       .setColor(0x2F3136)
-      .setTitle('💕 Partner')
+      .setTitle('<:1402282380940677235:1462756372017053791> Partner')
       .setDescription(`**${target.tag}** is married to <@${partner.odatnerId}>\n\nMarried ${marriedSince}`)
       .setThumbnail(target.displayAvatarURL());
     
