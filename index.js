@@ -60,6 +60,9 @@ function saveMarriages() {
   fs.writeFileSync(marriagesFile, JSON.stringify(marriages, null, 2));
 }
 
+// Ticket inactivity timers
+const ticketTimers = new Map();
+
 function getPartner(guildId, userId) {
   return marriages[guildId]?.[userId] || null;
 }
@@ -341,6 +344,20 @@ client.on('interactionCreate', async interaction => {
       
       await ticketChannel.send({ embeds: [embed], files: ['./snoe-logo.png'], components: [closeButton] });
       await interaction.reply({ content: `✅ Ticket created: ${ticketChannel}`, ephemeral: true });
+      
+      // Start inactivity timer (1 minute)
+      const timer = setTimeout(async () => {
+        try {
+          const inactiveEmbed = new EmbedBuilder()
+            .setColor(0x2F3136)
+            .setDescription('⏰ Ticket auto-closed due to inactivity.');
+          await ticketChannel.send({ embeds: [inactiveEmbed] });
+          setTimeout(() => ticketChannel.delete().catch(() => {}), 5000);
+        } catch (err) {}
+        ticketTimers.delete(ticketChannel.id);
+      }, 60000);
+      
+      ticketTimers.set(ticketChannel.id, { odatnerId: user.id, timer });
     } catch (err) {
       await interaction.reply({ content: `❌ Failed to create ticket: ${err.message}`, ephemeral: true });
     }
@@ -388,6 +405,13 @@ client.on('interactionCreate', async interaction => {
   if (interaction.isButton() && interaction.customId === 'close_ticket') {
     if (!interaction.channel.name.startsWith('ticket-')) {
       return interaction.reply({ content: '❌ This is not a ticket channel!', ephemeral: true });
+    }
+    
+    // Clear inactivity timer
+    const ticketData = ticketTimers.get(interaction.channel.id);
+    if (ticketData) {
+      clearTimeout(ticketData.timer);
+      ticketTimers.delete(interaction.channel.id);
     }
     
     await interaction.reply({ content: '🔒 Closing ticket in 5 seconds...' });
@@ -656,6 +680,13 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: '❌ This is not a ticket channel!', ephemeral: true });
     }
     
+    // Clear inactivity timer
+    const ticketData = ticketTimers.get(interaction.channel.id);
+    if (ticketData) {
+      clearTimeout(ticketData.timer);
+      ticketTimers.delete(interaction.channel.id);
+    }
+    
     await interaction.reply({ content: '🔒 Closing ticket in 5 seconds...' });
     setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
   }
@@ -847,6 +878,28 @@ client.on('interactionCreate', async interaction => {
 client.on('messageCreate', async message => {
   // Ignore bots and DMs
   if (message.author.bot || !message.guild) return;
+  
+  // Reset ticket inactivity timer if ticket creator replies
+  if (message.channel.name.startsWith('ticket-')) {
+    const ticketData = ticketTimers.get(message.channel.id);
+    if (ticketData && message.author.id === ticketData.odatnerId) {
+      clearTimeout(ticketData.timer);
+      
+      // Restart timer
+      const newTimer = setTimeout(async () => {
+        try {
+          const inactiveEmbed = new EmbedBuilder()
+            .setColor(0x2F3136)
+            .setDescription('⏰ Ticket auto-closed due to inactivity.');
+          await message.channel.send({ embeds: [inactiveEmbed] });
+          setTimeout(() => message.channel.delete().catch(() => {}), 5000);
+        } catch (err) {}
+        ticketTimers.delete(message.channel.id);
+      }, 60000);
+      
+      ticketTimers.set(message.channel.id, { odatnerId: ticketData.odatnerId, timer: newTimer });
+    }
+  }
   
   // Bypass role check
   if (automod.bypassRoleIds?.some(roleId => message.member?.roles.cache.has(roleId))) return;
