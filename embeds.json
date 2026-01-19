@@ -1,0 +1,17 @@
+{
+  "premium": {
+    "title": "Purchase Snoe Premium",
+    "color": "#FFFFFF",
+    "sellers": [
+      { "name": "Official Store", "url": "https://example.com", "methods": "Stripe, Crypto, PayPal, CashApp" },
+      { "name": "Seller 2", "url": "https://example.com", "methods": "PayPal, Crypto" }
+    ],
+    "games": [
+      { "name": "Fisch", "url": "https://roblox.com" },
+      { "name": "Grow a Garden", "url": "https://roblox.com" },
+      { "name": "99 Nights in the Forest", "url": "https://roblox.com" },
+      { "name": "Forge", "url": "https://roblox.com" }
+    ],
+    "footer": "You'll automatically be given access to future scripts by purchasing."
+  }
+}
