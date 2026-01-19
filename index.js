@@ -355,7 +355,7 @@ client.on('interactionCreate', async interaction => {
           setTimeout(() => ticketChannel.delete().catch(() => {}), 5000);
         } catch (err) {}
         ticketTimers.delete(ticketChannel.id);
-      }, 60000);
+      }, 1200000);
       
       ticketTimers.set(ticketChannel.id, { odatnerId: user.id, timer });
     } catch (err) {
@@ -895,7 +895,7 @@ client.on('messageCreate', async message => {
           setTimeout(() => message.channel.delete().catch(() => {}), 5000);
         } catch (err) {}
         ticketTimers.delete(message.channel.id);
-      }, 60000);
+      }, 1200000);
       
       ticketTimers.set(message.channel.id, { odatnerId: ticketData.odatnerId, timer: newTimer });
     }
