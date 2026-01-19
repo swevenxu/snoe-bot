@@ -162,6 +162,20 @@ const commands = [
     .setName('remove')
     .setDescription('Remove a user from the ticket')
     .addUserOption(opt => opt.setName('user').setDescription('User to remove').setRequired(true))
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('mute')
+    .setDescription('Timeout a user')
+    .addUserOption(opt => opt.setName('user').setDescription('User to mute').setRequired(true))
+    .addStringOption(opt => opt.setName('duration').setDescription('Duration (e.g. 10m, 1h, 1d)').setRequired(true))
+    .addStringOption(opt => opt.setName('reason').setDescription('Reason for mute'))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('unmute')
+    .setDescription('Remove timeout from a user')
+    .addUserOption(opt => opt.setName('user').setDescription('User to unmute').setRequired(true))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
     .toJSON()
 ];
 
@@ -587,6 +601,76 @@ client.on('interactionCreate', async interaction => {
     await interaction.channel.permissionOverwrites.delete(user.id);
     
     await interaction.reply({ content: `✅ Removed ${user} from the ticket.` });
+  }
+
+  // Mute command
+  if (interaction.commandName === 'mute') {
+    const user = interaction.options.getUser('user');
+    const duration = interaction.options.getString('duration');
+    const reason = interaction.options.getString('reason') || 'No reason provided';
+    const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+
+    if (!member) {
+      return interaction.reply({ content: '❌ User not found!', ephemeral: true });
+    }
+
+    // Parse duration
+    const match = duration.match(/^(\d+)(m|h|d)$/);
+    if (!match) {
+      return interaction.reply({ content: '❌ Invalid duration! Use format: 10m, 1h, 1d', ephemeral: true });
+    }
+
+    const amount = parseInt(match[1]);
+    const unit = match[2];
+    let ms;
+    if (unit === 'm') ms = amount * 60 * 1000;
+    else if (unit === 'h') ms = amount * 60 * 60 * 1000;
+    else if (unit === 'd') ms = amount * 24 * 60 * 60 * 1000;
+
+    // Max timeout is 28 days
+    if (ms > 28 * 24 * 60 * 60 * 1000) {
+      return interaction.reply({ content: '❌ Max timeout is 28 days!', ephemeral: true });
+    }
+
+    try {
+      await member.timeout(ms, reason);
+      
+      const embed = new EmbedBuilder()
+        .setColor(0x2F3136)
+        .setTitle('🔇 User Muted')
+        .setDescription(`**${user.tag}** has been muted.\n\n**Duration:** ${duration}\n**Reason:** ${reason}`)
+        .setThumbnail(user.displayAvatarURL())
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed] });
+    } catch (err) {
+      await interaction.reply({ content: `❌ Failed to mute: ${err.message}`, ephemeral: true });
+    }
+  }
+
+  // Unmute command
+  if (interaction.commandName === 'unmute') {
+    const user = interaction.options.getUser('user');
+    const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+
+    if (!member) {
+      return interaction.reply({ content: '❌ User not found!', ephemeral: true });
+    }
+
+    try {
+      await member.timeout(null);
+      
+      const embed = new EmbedBuilder()
+        .setColor(0x2F3136)
+        .setTitle('🔊 User Unmuted')
+        .setDescription(`**${user.tag}** has been unmuted.`)
+        .setThumbnail(user.displayAvatarURL())
+        .setTimestamp();
+      
+      await interaction.reply({ embeds: [embed] });
+    } catch (err) {
+      await interaction.reply({ content: `❌ Failed to unmute: ${err.message}`, ephemeral: true });
+    }
   }
 
 });
