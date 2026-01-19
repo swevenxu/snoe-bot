@@ -49,6 +49,40 @@ if (fs.existsSync(warningsFile)) {
   warnings = JSON.parse(fs.readFileSync(warningsFile, 'utf8'));
 }
 
+// Marriages storage
+const marriagesFile = './marriages.json';
+let marriages = {};
+if (fs.existsSync(marriagesFile)) {
+  marriages = JSON.parse(fs.readFileSync(marriagesFile, 'utf8'));
+}
+
+function saveMarriages() {
+  fs.writeFileSync(marriagesFile, JSON.stringify(marriages, null, 2));
+}
+
+function getPartner(guildId, userId) {
+  return marriages[guildId]?.[userId] || null;
+}
+
+function setMarriage(guildId, user1, user2) {
+  if (!marriages[guildId]) marriages[guildId] = {};
+  marriages[guildId][user1] = { odatnerId: user2, date: Date.now() };
+  marriages[guildId][user2] = { odatnerId: user1, date: Date.now() };
+  saveMarriages();
+}
+
+function removeMarriage(guildId, userId) {
+  if (!marriages[guildId]) return false;
+  const partner = marriages[guildId][userId]?.odatnerId;
+  if (partner) {
+    delete marriages[guildId][userId];
+    delete marriages[guildId][partner];
+    saveMarriages();
+    return true;
+  }
+  return false;
+}
+
 function saveWarnings() {
   fs.writeFileSync(warningsFile, JSON.stringify(warnings, null, 2));
 }
@@ -176,6 +210,20 @@ const commands = [
     .setDescription('Remove timeout from a user')
     .addUserOption(opt => opt.setName('user').setDescription('User to unmute').setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('marry')
+    .setDescription('Propose to someone')
+    .addUserOption(opt => opt.setName('user').setDescription('User to propose to').setRequired(true))
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('divorce')
+    .setDescription('Divorce your partner')
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('partner')
+    .setDescription('Check who someone is married to')
+    .addUserOption(opt => opt.setName('user').setDescription('User to check (leave empty for yourself)'))
     .toJSON()
 ];
 
@@ -299,6 +347,40 @@ client.on('interactionCreate', async interaction => {
     return;
   }
   
+  // Handle marriage proposal buttons
+  if (interaction.isButton() && interaction.customId.startsWith('marry_')) {
+    const [action, odatnerId, targetId] = interaction.customId.split('_');
+    
+    if (interaction.user.id !== targetId) {
+      return interaction.reply({ content: '❌ This proposal is not for you!', ephemeral: true });
+    }
+    
+    if (action === 'marry' && interaction.customId.includes('accept')) {
+      // Check if either person got married while waiting
+      if (getPartner(interaction.guild.id, odatnerId) || getPartner(interaction.guild.id, targetId)) {
+        return interaction.update({ content: '❌ One of you is already married!', embeds: [], components: [] });
+      }
+      
+      setMarriage(interaction.guild.id, odatnerId, targetId);
+      
+      const embed = new EmbedBuilder()
+        .setColor(0x2F3136)
+        .setTitle('💍 Just Married!')
+        .setDescription(`<@${odatnerId}> and <@${targetId}> are now married!\n\nCongratulations! 🎉`)
+        .setTimestamp();
+      
+      await interaction.update({ embeds: [embed], components: [] });
+    } else if (action === 'marry' && interaction.customId.includes('deny')) {
+      const embed = new EmbedBuilder()
+        .setColor(0x2F3136)
+        .setTitle('💔 Proposal Rejected')
+        .setDescription(`<@${targetId}> rejected <@${odatnerId}>'s proposal.`);
+      
+      await interaction.update({ embeds: [embed], components: [] });
+    }
+    return;
+  }
+
   // Handle close ticket button
   if (interaction.isButton() && interaction.customId === 'close_ticket') {
     if (!interaction.channel.name.startsWith('ticket-')) {
@@ -671,6 +753,89 @@ client.on('interactionCreate', async interaction => {
     } catch (err) {
       await interaction.reply({ content: `❌ Failed to unmute: ${err.message}`, ephemeral: true });
     }
+  }
+
+  // Marry command
+  if (interaction.commandName === 'marry') {
+    const target = interaction.options.getUser('user');
+    
+    if (target.id === interaction.user.id) {
+      return interaction.reply({ content: '❌ You can\'t marry yourself!', ephemeral: true });
+    }
+    
+    if (target.bot) {
+      return interaction.reply({ content: '❌ You can\'t marry a bot!', ephemeral: true });
+    }
+    
+    if (getPartner(interaction.guild.id, interaction.user.id)) {
+      return interaction.reply({ content: '❌ You\'re already married! Use `/divorce` first.', ephemeral: true });
+    }
+    
+    if (getPartner(interaction.guild.id, target.id)) {
+      return interaction.reply({ content: `❌ ${target.tag} is already married!`, ephemeral: true });
+    }
+    
+    const embed = new EmbedBuilder()
+      .setColor(0x2F3136)
+      .setTitle('💍 Marriage Proposal')
+      .setDescription(`${interaction.user} has proposed to ${target}!\n\n${target}, do you accept?`);
+    
+    const buttons = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`marry_accept_${interaction.user.id}_${target.id}`)
+        .setLabel('Accept')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('💍'),
+      new ButtonBuilder()
+        .setCustomId(`marry_deny_${interaction.user.id}_${target.id}`)
+        .setLabel('Deny')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('💔')
+    );
+    
+    await interaction.reply({ embeds: [embed], components: [buttons] });
+  }
+
+  // Divorce command
+  if (interaction.commandName === 'divorce') {
+    const partner = getPartner(interaction.guild.id, interaction.user.id);
+    
+    if (!partner) {
+      return interaction.reply({ content: '❌ You\'re not married!', ephemeral: true });
+    }
+    
+    removeMarriage(interaction.guild.id, interaction.user.id);
+    
+    const embed = new EmbedBuilder()
+      .setColor(0x2F3136)
+      .setTitle('💔 Divorced')
+      .setDescription(`${interaction.user} has divorced <@${partner.odatnerId}>.`)
+      .setTimestamp();
+    
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  // Partner command
+  if (interaction.commandName === 'partner') {
+    const target = interaction.options.getUser('user') || interaction.user;
+    const partner = getPartner(interaction.guild.id, target.id);
+    
+    if (!partner) {
+      const msg = target.id === interaction.user.id 
+        ? '❌ You\'re not married!' 
+        : `❌ ${target.tag} is not married!`;
+      return interaction.reply({ content: msg, ephemeral: true });
+    }
+    
+    const marriedSince = `<t:${Math.floor(partner.date / 1000)}:R>`;
+    
+    const embed = new EmbedBuilder()
+      .setColor(0x2F3136)
+      .setTitle('💕 Partner')
+      .setDescription(`**${target.tag}** is married to <@${partner.odatnerId}>\n\nMarried ${marriedSince}`)
+      .setThumbnail(target.displayAvatarURL());
+    
+    await interaction.reply({ embeds: [embed] });
   }
 
 });
