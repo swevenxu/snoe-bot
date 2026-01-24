@@ -325,6 +325,11 @@ const commands = [
     .setDescription('Delete multiple messages from a channel')
     .addIntegerOption(opt => opt.setName('amount').setDescription('Number of messages to delete (1-100)').setRequired(true).setMinValue(1).setMaxValue(100))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('purgeall')
+    .setDescription('Delete all messages in a channel by cloning it')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
     .toJSON()
 ];
 
@@ -1168,6 +1173,19 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ content: `Deleted ${deleted.size} messages.`, ephemeral: true });
     } catch (err) {
       await interaction.reply({ content: `Failed to delete messages: ${err.message}`, ephemeral: true });
+    }
+  }
+
+  // Purge all command
+  if (interaction.commandName === 'purgeall') {
+    try {
+      const channel = interaction.channel;
+      const newChannel = await channel.clone();
+      await newChannel.setPosition(channel.position);
+      await channel.delete();
+      await newChannel.send({ content: 'Channel cleared.' });
+    } catch (err) {
+      await interaction.reply({ content: `Failed to clear channel: ${err.message}`, ephemeral: true });
     }
   }
 
