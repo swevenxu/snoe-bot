@@ -96,12 +96,12 @@ async function endGiveaway(messageId, client) {
     // Update the embed to show ended
     const endedEmbed = new EmbedBuilder()
       .setColor(0x2F3136)
-      .setTitle('🎉 GIVEAWAY ENDED 🎉')
+      .setTitle('Giveaway Ended')
       .setDescription(winners.length > 0 ? `**Winner(s):** ${winnerMentions}` : 'No one entered the giveaway.')
       .addFields(
-        { name: '🎁 Prize', value: giveaway.prize, inline: true },
-        { name: '📋 Entries', value: `${giveaway.entries.length}`, inline: true },
-        { name: '👤 Hosted by', value: `<@${giveaway.hostId}>`, inline: true }
+        { name: 'Prize', value: giveaway.prize, inline: true },
+        { name: 'Entries', value: `${giveaway.entries.length}`, inline: true },
+        { name: 'Hosted by', value: `<@${giveaway.hostId}>`, inline: true }
       )
       .setThumbnail('attachment://snoe-logo.png')
       .setTimestamp();
@@ -110,9 +110,8 @@ async function endGiveaway(messageId, client) {
     const disabledButton = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(`giveaway_ended_${messageId}`)
-        .setLabel('Giveaway Ended')
+        .setLabel('Ended')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🎉')
         .setDisabled(true)
     );
     
@@ -120,9 +119,9 @@ async function endGiveaway(messageId, client) {
     
     // Announce winner
     if (winners.length > 0) {
-      await channel.send(`🎉 Congratulations ${winnerMentions}! You won **${giveaway.prize}**!`);
+      await channel.send(`Congratulations ${winnerMentions}! You won **${giveaway.prize}**.`);
     } else {
-      await channel.send(`😢 The giveaway for **${giveaway.prize}** ended with no entries.`);
+      await channel.send(`The giveaway for **${giveaway.prize}** ended with no entries.`);
     }
   } catch (err) {
     console.log('❌ Failed to end giveaway:', err.message);
@@ -533,17 +532,17 @@ client.on('interactionCreate', async interaction => {
     try {
       const embed = EmbedBuilder.from(interaction.message.embeds[0])
         .setFields(
-          { name: '🎁 Prize', value: giveaway.prize, inline: true },
-          { name: '🏆 Winners', value: `${giveaway.winnerCount}`, inline: true },
-          { name: '📋 Entries', value: `${giveaway.entries.length}`, inline: true },
-          { name: '⏰ Ends', value: `<t:${Math.floor(giveaway.endTime / 1000)}:R>`, inline: true },
-          { name: '👤 Hosted by', value: `<@${giveaway.hostId}>`, inline: true }
+          { name: 'Prize', value: giveaway.prize, inline: true },
+          { name: 'Winners', value: `${giveaway.winnerCount}`, inline: true },
+          { name: 'Entries', value: `${giveaway.entries.length}`, inline: true },
+          { name: 'Ends', value: `<t:${Math.floor(giveaway.endTime / 1000)}:R>`, inline: true },
+          { name: 'Hosted by', value: `<@${giveaway.hostId}>`, inline: true }
         );
       
       await interaction.message.edit({ embeds: [embed] });
     } catch (err) {}
     
-    await interaction.reply({ content: '🎉 You have entered the giveaway! Good luck!', ephemeral: true });
+    await interaction.reply({ content: 'You have entered the giveaway.', ephemeral: true });
     return;
   }
 
@@ -1042,14 +1041,14 @@ client.on('interactionCreate', async interaction => {
     
     const embed = new EmbedBuilder()
       .setColor(0x2F3136)
-      .setTitle('🎉 GIVEAWAY 🎉')
-      .setDescription('Click the button below to enter!')
+      .setTitle('Giveaway')
+      .setDescription('Click the button below to enter.')
       .addFields(
-        { name: '🎁 Prize', value: prize, inline: true },
-        { name: '🏆 Winners', value: `${winnerCount}`, inline: true },
-        { name: '📋 Entries', value: '0', inline: true },
-        { name: '⏰ Ends', value: `<t:${Math.floor(endTime / 1000)}:R>`, inline: true },
-        { name: '👤 Hosted by', value: `${interaction.user}`, inline: true }
+        { name: 'Prize', value: prize, inline: true },
+        { name: 'Winners', value: `${winnerCount}`, inline: true },
+        { name: 'Entries', value: '0', inline: true },
+        { name: 'Ends', value: `<t:${Math.floor(endTime / 1000)}:R>`, inline: true },
+        { name: 'Hosted by', value: `${interaction.user}`, inline: true }
       )
       .setThumbnail('attachment://snoe-logo.png')
       .setTimestamp(endTime);
@@ -1058,9 +1057,8 @@ client.on('interactionCreate', async interaction => {
     const tempButton = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('giveaway_enter_temp')
-        .setLabel('Enter Giveaway')
+        .setLabel('Enter')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🎉')
     );
     
     try {
@@ -1074,9 +1072,8 @@ client.on('interactionCreate', async interaction => {
       const realButton = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`giveaway_enter_${giveawayMessage.id}`)
-          .setLabel('Enter Giveaway')
+          .setLabel('Enter')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('🎉')
       );
       
       await giveawayMessage.edit({ components: [realButton] });
@@ -1130,11 +1127,11 @@ client.on('interactionCreate', async interaction => {
     
     const embed = new EmbedBuilder()
       .setColor(0x2F3136)
-      .setTitle('🎉 Giveaway Rerolled!')
-      .setDescription(`**Prize:** ${giveaway.prize}\n\n🏆 **New Winner(s):** ${winnerMentions}`)
+      .setTitle('Giveaway Rerolled')
+      .setDescription(`**Prize:** ${giveaway.prize}\n\n**New Winner(s):** ${winnerMentions}`)
       .setTimestamp();
     
-    await interaction.reply({ content: `🎉 Congratulations ${winnerMentions}! You won **${giveaway.prize}**!`, embeds: [embed] });
+    await interaction.reply({ content: `Congratulations ${winnerMentions}! You won **${giveaway.prize}**.`, embeds: [embed] });
   }
 
 });
