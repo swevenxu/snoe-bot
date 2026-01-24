@@ -315,6 +315,16 @@ const commands = [
     .addStringOption(opt => opt.setName('message_id').setDescription('The giveaway message ID').setRequired(true))
     .addIntegerOption(opt => opt.setName('winners').setDescription('Number of new winners to pick (default: 1)').setMinValue(1).setMaxValue(20))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('members')
+    .setDescription('Show the server member count (excluding bots)')
+    .toJSON(),
+  new SlashCommandBuilder()
+    .setName('purge')
+    .setDescription('Delete multiple messages from a channel')
+    .addIntegerOption(opt => opt.setName('amount').setDescription('Number of messages to delete (1-100)').setRequired(true).setMinValue(1).setMaxValue(100))
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .toJSON()
 ];
 
@@ -1132,6 +1142,33 @@ client.on('interactionCreate', async interaction => {
       .setTimestamp();
     
     await interaction.reply({ content: `Congratulations ${winnerMentions}! You won **${giveaway.prize}**.`, embeds: [embed] });
+  }
+
+  // Members command
+  if (interaction.commandName === 'members') {
+    const members = await interaction.guild.members.fetch();
+    const humans = members.filter(m => !m.user.bot).size;
+    const bots = members.filter(m => m.user.bot).size;
+    
+    const embed = new EmbedBuilder()
+      .setColor(0x2F3136)
+      .setTitle('Member Count')
+      .setDescription(`**Members:** ${humans}\n**Bots:** ${bots}\n**Total:** ${members.size}`)
+      .setTimestamp();
+    
+    await interaction.reply({ embeds: [embed] });
+  }
+
+  // Purge command
+  if (interaction.commandName === 'purge') {
+    const amount = interaction.options.getInteger('amount');
+    
+    try {
+      const deleted = await interaction.channel.bulkDelete(amount, true);
+      await interaction.reply({ content: `Deleted ${deleted.size} messages.`, ephemeral: true });
+    } catch (err) {
+      await interaction.reply({ content: `Failed to delete messages: ${err.message}`, ephemeral: true });
+    }
   }
 
 });
